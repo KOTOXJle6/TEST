@@ -1,0 +1,118 @@
+global
+  log 127.0.0.1 local0 info
+  maxconn 10000
+  daemon
+  quiet
+  tune.ssl.default-dh-param 2048
+
+defaults
+  log global
+  mode http
+  option httplog
+  option dontlognull
+  timeout connect 60000ms
+  timeout client 30000ms
+  timeout server 60000ms
+  timeout check 60000ms
+  stats enable
+  stats uri /stats
+
+frontend fe_ex2013
+  mode http
+  bind *:443 ssl crt /etc/ssl/certs/exchange_certificate_and_key_nopassword.pem
+  acl autodiscover url_beg /Autodiscover
+  acl mapi url_beg /mapi
+  acl rpc url_beg /rpc
+  acl owa url_beg /owa
+  acl eas url_beg /microsoft-server-activesync
+  acl ecp url_beg /ecp
+  acl ews url_beg /ews
+  acl oab url_beg /oab
+  use_backend be_ex2013_autodiscover if autodiscover
+  use_backend be_ex2013_mapi if mapi
+  use_backend be_ex2013_rpc if rpc
+  use_backend be_ex2013_owa if owa
+  use_backend be_ex2013_eas if eas
+  use_backend be_ex2013_ecp if ecp
+  use_backend be_ex2013_ews if ews
+  use_backend be_ex2013_oab if oab
+  default_backend be_ex2013
+  option forwardfor except 127.0.0.1
+
+backend be_ex2013_autodiscover
+  mode http
+  balance roundrobin
+  option httpchk GET /autodiscover/healthcheck.htm
+  option log-health-checks
+  http-check expect status 200
+  server exch01 10.100.255.213:443 check ssl inter 15s verify required ca-file /etc/ssl/certs/ca-certificates.crt
+#  server lab-ex02 10.30.1.12:443 check ssl inter 15s verify required ca-file /etc/ssl/certs/ca-bundle.crt
+
+backend be_ex2013_mapi
+  mode http
+  balance roundrobin
+  option httpchk GET /mapi/healthcheck.htm
+  option log-health-checks
+  http-check expect status 200
+  server exch01 10.100.255.213:443 check ssl inter 15s verify required ca-file /etc/ssl/certs/ca-certificates.crt
+#  server lab-ex02 10.30.1.12:443 check ssl inter 15s verify required ca-file /etc/ssl/certs/ca-bundle.crt
+
+backend be_ex2013_rpc
+  mode http
+  balance roundrobin
+  option httpchk GET /rpc/healthcheck.htm
+  option log-health-checks
+  http-check expect status 200
+  server exch01 10.100.255.213:443 check ssl inter 15s verify required ca-file /etc/ssl/certs/ca-certificates.crt
+#  server lab-ex02 10.30.1.12:443 check ssl inter 15s verify required ca-file /etc/ssl/certs/ca-bundle.crt
+
+backend be_ex2013_owa
+  mode http
+  balance roundrobin
+  option httpchk GET /owa/healthcheck.htm
+  option log-health-checks
+  http-check expect status 200
+  server exch01 10.100.255.213:443 check ssl inter 15s verify required ca-file /etc/ssl/certs/ca-certificates.crt
+#  server lab-ex02 10.30.1.12:443 check ssl inter 15s verify required ca-file /etc/ssl/certs/ca-bundle.crt
+
+backend be_ex2013_eas
+  mode http
+  balance roundrobin
+  option httpchk GET /microsoft-server-activesync/healthcheck.htm
+  option log-health-checks
+  http-check expect status 200
+  server exch01 10.100.255.213:443 check ssl inter 15s verify required ca-file /etc/ssl/certs/ca-certificates.crt
+#  server lab-ex02 10.30.1.12:443 check ssl inter 15s verify required ca-file /etc/ssl/certs/ca-bundle.crt
+
+backend be_ex2013_ecp
+  mode http
+  balance roundrobin
+  option httpchk GET /ecp/healthcheck.htm
+  option log-health-checks
+  http-check expect status 200
+#  server lab-ex01 10.30.1.11:443 check ssl inter 15s verify required ca-file /etc/ssl/certs/ca-bundle.crt
+  server exch01 10.100.255.213:443 check ssl inter 15s verify required ca-file /etc/ssl/certs/ca-certificates.crt
+
+backend be_ex2013_ews
+  mode http
+  balance roundrobin
+  option httpchk GET /ews/healthcheck.htm
+  option log-health-checks
+  http-check expect status 200
+#  server lab-ex01 10.30.1.11:443 check ssl inter 15s verify required ca-file /etc/ssl/certs/ca-bundle.crt
+  server exch01 10.100.255.213:443 check ssl inter 15s verify required ca-file /etc/ssl/certs/ca-certificates.crt
+
+backend be_ex2013_oab
+  mode http
+  balance roundrobin
+  option httpchk GET /oab/healthcheck.htm
+  option log-health-checks
+  http-check expect status 200
+#  server lab-ex01 10.30.1.11:443 check ssl inter 15s verify required ca-file /etc/ssl/certs/ca-bundle.crt
+  server exch01 10.100.255.213:443 check ssl inter 15s verify required ca-file /etc/ssl/certs/ca-certificates.crt
+
+backend be_ex2013
+  mode http
+  balance roundrobin
+  server exch01 10.100.255.213:443 check ssl inter 15s verify required ca-file /etc/ssl/certs/ca-certificates.crt
+#  server lab-ex02 10.30.1.12:443 check ssl inter 15s verify required ca-file /etc/ssl/certs/ca-bundle.crt

@@ -1,0 +1,115 @@
+global
+	log /dev/log	local0
+	log /dev/log	local1 notice
+	chroot /var/lib/haproxy
+	stats   bind-process 2 3 4 5 6
+	stats timeout 30s
+	user haproxy
+	group haproxy
+	daemon
+	maxconn 10000
+	
+	# Default SSL material locations
+	ca-base /etc/ssl/certs
+	crt-base /etc/ssl/private
+
+	# Default ciphers to use on SSL-enabled listening sockets.
+	# For more information, see ciphers(1SSL). This list is from:
+	#  https://hynek.me/articles/hardening-your-web-servers-ssl-ciphers/
+	ssl-default-bind-ciphers ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS
+	ssl-default-bind-options no-sslv3
+
+defaults
+######## Default values for all entries till next defaults section
+#defaults
+##
+#  option  forwardfor except 127.0.0.1
+##  
+  option  dontlognull             # Do not log connections with no requests
+  option  redispatch              # Try another server in case of connection failure
+  option  contstats               # Enable continuous traffic statistics updates
+  retries 3                       # Try to connect up to 3 times in case of failure 
+  timeout connect 5s              # 5 seconds max to connect or to stay in queue
+  timeout http-keep-alive 1s      # 1 second max for the client to post next request
+  timeout http-request 15s        # 15 seconds max for the client to send a request
+  timeout queue 30s               # 30 seconds max queued on load balancer
+  timeout tarpit 1m               # tarpit hold tim
+  backlog 10000                   # Size of SYN backlog queue
+ 
+  balance roundrobin                      #alctl: load balancing algorithm
+  mode tcp                                #alctl: protocol analyser
+  option tcplog                           #alctl: log format
+  log global                              #alctl: log activation
+  timeout client 300s                     #alctl: client inactivity timeout
+  timeout server 300s                     #alctl: server inactivity timeout
+  default-server inter 3s rise 2 fall 3   #alctl: default check parameters
+
+
+
+frontend ft_exchange_https
+  bind 10.100.255.190:443 name https          #alctl: listener https configuration.
+  bind-process 2 3 4 5 6
+  maxconn 10000                         #alctl: connection max (depends on capacity)
+# добавил опцию
+#  option forwardfor header X-Real-IP
+#  mode http
+  option forwardfor except 127.0.0.1
+###############
+  default_backend bk_exchange_https       #alctl: default farm to use
+
+backend bk_exchange_https
+##  bind-process 2 3 4 5 6
+  server EXCH01.mgt.test 10.100.255.213:443 maxconn 10000 check #alctl: server EXCH01 configuration.
+##  server EXCH01.mgt.test 10.100.255.213:443 send-proxy-v2
+  
+frontend ft_exchange_smtp
+  bind 10.100.255.190:25 name smtp          #alctl: listener https configuration.
+  maxconn 10000                         #alctl: connection max (depends on capacity)
+  default_backend bk_exchange_smtp       #alctl: default farm to use
+
+backend bk_exchange_smtp
+  server EXCH01.mgt.test 10.100.255.213:25 maxconn 10000 check #alctl: server EXCH01 configuration.
+  
+frontend ft_exchange_smtpSSL
+  bind 10.100.255.190:587 name smtpSSL          #alctl: listener https configuration.
+  bind-process 1
+  maxconn 1000                         #alctl: connection max (depends on capacity)
+  default_backend bk_exchange_smtpSSL       #alctl: default farm to use
+
+backend bk_exchange_smtpSSL
+  log	global
+  server EXCH01.mgt.test 10.100.255.213:25 maxconn 10000 check    #alctl: server EXCH01 configuration.
+  
+ frontend ft_exchange_pop3
+  bind 10.100.255.190:110 name pop3          #alctl: listener https configuration.
+  maxconn 10000                         #alctl: connection max (depends on capacity)
+  bind-process 1
+  default_backend bk_exchange_pop3       #alctl: default farm to use
+ 
+backend bk_exchange_pop3
+  server EXCH01.mgt.test 10.100.255.213:110 check    #alctl: server EXCH01 configuration.
+  
+frontend ft_exchange_pop3SSL
+  bind 10.100.255.190:995 name pop3SSL          #alctl: listener https configuration.
+  maxconn 10000                         #alctl: connection max (depends on capacity)
+  bind-process 1
+  default_backend bk_exchange_pop3SSL       #alctl: default farm to use
+ 
+backend bk_exchange_pop3SSL
+  server EXCH01.mgt.test 10.100.255.213:995 check    #alctl: server EXCH01 configuration.
+  
+frontend ft_exchange_imap
+  bind 10.100.255.190:143 name imap          #alctl: listener https configuration.
+  maxconn 10000                         #alctl: connection max (depends on capacity)
+  bind-process 1
+  default_backend bk_exchange_imap       #alctl: default farm to use
+backend bk_exchange_imap
+  server EXCH01.mgt.test 10.100.255.213:143 maxconn 10000 check    #alctl: server EXCH01 configuration.
+  
+frontend ft_exchange_imapSSL
+  bind 10.100.255.190:993 name imapSSL          #alctl: listener https configuration.
+  maxconn 10000                         #alctl: connection max (depends on capacity)
+  bind-process 1
+  default_backend bk_exchange_imapSSL       #alctl: default farm to use
+backend bk_exchange_imapSSL
+  server EXCH01.mgt.test 10.100.255.213:993 maxconn 10000 check    #alctl: server EXCH01 configuration.
